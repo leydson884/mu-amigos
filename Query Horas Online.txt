@@ -1,0 +1,37 @@
+CREATE TRIGGER [MembStat_RecordOnlineHours] ON [dbo].[MEMB_STAT]
+AFTER UPDATE
+AS
+ DECLARE @memb___id varchar(10)
+ DECLARE @connectstat tinyint
+ DECLARE @char varchar(10)
+ DECLARE @horas int
+ DECLARE @CtlCode tinyint
+
+ SELECT @memb___id=memb___id,@connectstat=connectstat FROM INSERTED
+
+ IF (@connectstat = 0) 
+  BEGIN
+   UPDATE [dbo].[MEMB_STAT]
+   SET OnlineHours = OnlineHours + datediff(minute, ConnectTM, getdate()),
+   OnlineHoursTroca = OnlineHoursTroca + datediff(minute, ConnectTM, getdate())
+   WHERE memb___id = @memb___id
+   
+   SET @char = (SELECT GameIDC FROM MuOnline.dbo.AccountCharacter where Id = @memb___id)
+   SET @CtlCode = (SELECT CtlCode FROM MuOnline.dbo.Character where Name = @char)
+   SET @horas = (SELECT OnlineHours FROM MEMB_STAT WHERE memb___id = @memb___id)
+
+  IF (@CtlCode < 1)
+   BEGIN
+   UPDATE Muonline.dbo.Character 
+   SET OnlineHours = OnlineHours+@horas
+   WHERE Name = @char
+
+   UPDATE Muonline.dbo.MEMB_INFO
+   SET OnlineHoursTroca = OnlineHoursTroca+@horas
+   WHERE memb___id = @memb___id
+
+   DELETE FROM MEMB_STAT WHERE memb___id = @memb___id
+  
+  END
+  
+ END
